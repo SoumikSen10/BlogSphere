@@ -1,14 +1,12 @@
 import express from "express";
 const app = express();
 
+import path from "path";
+
 import jwt from "jsonwebtoken";
 
 import dotenv from "dotenv";
 dotenv.config({ path: "./.env" });
-
-const corsOptions = {
-  origin: "http://example.com",
-};
 
 import cors from "cors";
 app.use(cors({ credentials: true, origin: "http://localhost:5173" }));
@@ -17,12 +15,23 @@ app.use(express.json()); //for parsing the json
 
 import mongoose from "mongoose";
 import { User } from "./models/User.models.js";
+import { Post } from "./models/Post.models.js";
 
 import bcrypt from "bcrypt";
 const salt = bcrypt.genSaltSync(10);
 
 import cookieParser from "cookie-parser";
 app.use(cookieParser());
+
+import multer from "multer";
+const uploadMiddleware = multer({ dest: "uploads/" });
+import fs from "fs";
+import bodyParser from "body-parser";
+app.use(bodyParser.json({ limit: "50mb" }));
+app.use(bodyParser.urlencoded({ extended: true, limit: "50mb" }));
+
+const __dirname = path.dirname(new URL(import.meta.url).pathname);
+app.use("/uploads", express.static(path.join(__dirname, "/uploads")));
 
 /* import { connectDB } from "./db/index.js"; */
 
@@ -110,6 +119,108 @@ app.get("/profile", (req, res) => {
 
 app.post("/logout", (req, res) => {
   res.cookie("token", "").json("ok");
+});
+
+app.post("/post", uploadMiddleware.single("file"), async (req, res) => {
+  const { title, summary, content } = req.body;
+
+  //middlewares stores file in uploads folder, rest part for file renaming and format preserving
+  const { originalname, path } = req.file;
+  const parts = originalname.split(".");
+  const ext = parts[parts.length - 1];
+  const newPath = path + "." + ext;
+  fs.renameSync(path, newPath);
+
+  const { token } = req.cookies;
+  jwt.verify(token, process.env.SECRET, {}, async (err, info) => {
+    if (err) {
+      return res.status(401).json({ error: "Token invalid" }); // Handle invalid token
+    }
+    try {
+      const newPost = new Post({
+        title,
+        summary,
+        content,
+        cover: newPath,
+        author: info.id,
+      });
+      await newPost.save();
+      res.status(201).json({ message: "Post created successfully" });
+    } catch (error) {
+      console.error("Error in creating post:", error);
+      res.status(500).json({ message: "Failed to create post" });
+    }
+
+    //res.json({ ext });
+  });
+});
+
+app.get("/post", async (req, res) => {
+  try {
+    const posts = await Post.find({})
+      .populate("author", ["username"]) // Correct usage of populate()
+      .sort({ createdAt: -1 })
+      .limit(20);
+
+    res.json(posts);
+  } catch (error) {
+    console.error("Error fetching posts:", error);
+    res.status(500).json({ message: "Failed to fetch posts" });
+  }
+});
+
+app.get("/post/:id", async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const post = await Post.findById(id).populate("author", ["username"]);
+    res.json(post);
+  } catch (error) {
+    console.error("Error fetching post:", error);
+    res.status(500).json({ message: "Failed to fetch post" });
+  }
+});
+
+app.put("/post", uploadMiddleware.single("file"), async (req, res) => {
+  let newPath = null;
+  if (req.file) {
+    const { originalname, path } = req.file;
+    const parts = originalname.split(".");
+    const ext = parts[parts.length - 1];
+    newPath = path + "." + ext;
+    fs.renameSync(path, newPath);
+  }
+  const { token } = req.cookies;
+  jwt.verify(token, process.env.SECRET, {}, async (err, info) => {
+    if (err) {
+      return res.status(401).json({ error: "Token invalid" }); // Handle invalid token
+    }
+    const { id, title, summary, content } = req.body;
+    try {
+      const post = await Post.findById(id);
+      const isAuthor = JSON.stringify(post.author) === JSON.stringify(info.id);
+      res.json({ isAuthor, post, info });
+
+      if (!isAuthor) {
+        return res.status(400).json("You are not author");
+      }
+
+      await post.updateOne({
+        title,
+        summary,
+        content,
+        cover: newPath ? newPath : post.cover,
+      });
+
+      await post.save();
+      res.status(201).json({ message: "Post updated successfully" });
+    } catch (error) {
+      console.error("Error in creating post:", error);
+      res.status(500).json({ message: "Failed to update post" });
+    }
+
+    //res.json({ ext });
+  });
 });
 
 app.listen(process.env.PORT || 8080, () => {
