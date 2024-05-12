@@ -6,13 +6,13 @@ const Post = ({ _id, title, summary, content, cover, createdAt, author }) => {
   return (
     <div className="post">
       <div className="image">
-        <Link to={`http://localhost:8080/post/${_id}`}>
+        <Link to={`http://localhost:5173/post/${_id}`}>
           <img src={"http://localhost:8080/" + cover} alt="" />
         </Link>
       </div>
 
       <div className="texts">
-        <Link to={`http://localhost:8080/post/${_id}`}>
+        <Link to={`http://localhost:5173/post/${_id}`}>
           <h2>{title}</h2>
         </Link>
         <p className="info">

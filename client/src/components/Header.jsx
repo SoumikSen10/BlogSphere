@@ -6,7 +6,7 @@ const Header = () => {
   const [username, setUsername] = useState(null);
   const { userInfo, setUserInfo } = useContext(UserContext);
   useEffect(() => {
-    fetch("http://localhost:8080/profile", {
+    fetch("http://localhost:5173/profile", {
       credentials: "include",
     }).then((response) => {
       response.json().then((userInfo) => {

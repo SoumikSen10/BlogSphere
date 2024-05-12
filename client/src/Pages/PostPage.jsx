@@ -8,29 +8,38 @@ const PostPage = () => {
   const [postInfo, setPostInfo] = useState(null);
   const { userInfo } = useContext(UserContext);
   const { id } = useParams();
-  useEffect(async () => {
-    await fetch(`http://localhost:8080/post/${id}`, {
-      method: "GET",
-      headers: { "Content-Type": "application/json" },
-    }).then((response) => {
-      response.json().then((postInfo) => {
-        setPostInfo(postInfo);
-      });
-    });
-  }, []);
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await fetch(`http://localhost:8080/post/${id}`, {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        });
+        const postData = await response.json();
+        console.log("Post data:", postData);
+        setPostInfo(postData);
+      } catch (error) {
+        console.error("Error fetching post data:", error);
+      }
+    };
+
+    fetchData();
+  }, [id]);
 
   if (!postInfo) return "";
   return (
     <div className="post-page">
       <h1>{postInfo.title}</h1>
       {/* <time>{formatISO9875()}</time> */}
-      <time>{format(new Date(createdAt), "MMM d, yyyy HH:mm")}</time>
+      {/*  <time>{format(new Date(createdAt), "MMM d, yyyy HH:mm")}</time> */}
+      <time>{format(new Date(postInfo.createdAt), "MMM d, yyyy HH:mm")}</time>
+
       <div className="author">by @{postInfo.author.username}</div>
       {userInfo.id === postInfo.author._id && (
         <div className="edit-row">
           <Link
             className="edit-btn"
-            to={`http://localhost:8080/edit/${postInfo._id}`}
+            to={`http://localhost:5173/edit/${postInfo._id}`}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
