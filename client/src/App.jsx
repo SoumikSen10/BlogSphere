@@ -8,6 +8,7 @@ import { UserContextProvider } from "./context/UserContext";
 import CreatePost from "./Pages/CreatePost";
 import PostPage from "./Pages/PostPage";
 import EditPost from "./Pages/EditPost";
+import DeletePost from "./Pages/DeletePost";
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
           <Route path={"/create"} element={<CreatePost />} />
           <Route path={"/post/:id"} element={<PostPage />} />
           <Route path={"/edit/:id"} element={<EditPost />} />
+          <Route path={"/delete/:id"} element={<DeletePost />} />
         </Route>
       </Routes>
     </UserContextProvider>

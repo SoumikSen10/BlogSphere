@@ -238,6 +238,38 @@ app.put("/post", uploadMiddleware.single("file"), async (req, res) => {
   }
 });
 
+// DELETE route to delete a post
+app.delete("/post/:id", async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const { token } = req.cookies;
+    jwt.verify(token, process.env.SECRET, {}, async (err, info) => {
+      if (err) {
+        return res.status(401).json({ error: "Token invalid" });
+      }
+
+      const post = await Post.findById(id);
+      if (!post) {
+        return res.status(404).json({ message: "Post not found" });
+      }
+
+      const isAuthor = post.author.toString() === info.id.toString();
+      if (!isAuthor) {
+        return res
+          .status(403)
+          .json({ message: "You are not authorized to delete this post" });
+      }
+
+      await Post.findByIdAndDelete(id);
+      res.status(200).json({ message: "Post deleted successfully" });
+    });
+  } catch (error) {
+    console.error("Error deleting post:", error);
+    res.status(500).json({ message: "Failed to delete post" });
+  }
+});
+
 app.listen(process.env.PORT || 8080, () => {
   console.log(`Listening to app at PORT ${process.env.PORT}`);
 });
